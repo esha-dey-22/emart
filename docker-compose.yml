@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  site:
+    build: .
+    ports:
+      - "8081:80"        # site available at http://localhost:8081
+    restart: unless-stopped
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    privileged: true                       # lets the container access docker socket in some setups
+    ports:
+      - "8080:8080"                        # Jenkins on http://localhost:8080
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # allow Jenkins to use host Docker daemon to build images
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    restart: unless-stopped
+
+  nagios:
+    image: jasonrivers/nagios:latest
+    ports:
+      - "8082:80"
+    volumes:
+      - ./nagios_conf:/opt/nagios/etc
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:

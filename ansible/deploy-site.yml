@@ -1,0 +1,31 @@
+---
+- name: Deploy E-Mart site container
+  hosts: webservers
+  become: true
+  vars:
+    image: "yourdockerhubusername/emart-site:latest"
+    container_name: "emart-site"
+    publish_port: "80:80"
+
+  tasks:
+    - name: Ensure Docker is installed (using community.docker or package)
+      apt:
+        name: docker.io
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull site image
+      command: docker pull {{ image }}
+
+    - name: Stop existing container (if any)
+      command: docker rm -f {{ container_name }}
+      ignore_errors: true
+
+    - name: Run new container
+      command: docker run -d --name {{ container_name }} -p {{ publish_port }} --restart=always {{ image }}
