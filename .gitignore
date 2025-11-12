@@ -1,0 +1,7 @@
+# local
+node_modules/
+*.pem
+*.tfstate
+terraform.tfstate
+jenkins_home/
+.env
