@@ -1,13 +1,10 @@
-# Dockerfile — serve static frontend with nginx
-FROM nginx:stable-alpine AS runtime
+# Simple Dockerfile to serve static frontend via nginx
+FROM nginx:stable-alpine
 
-WORKDIR /usr/share/nginx/html
-# Clear default content
-RUN rm -rf ./*
-
-# Copy compiled/static frontend files
-COPY ./frontend/ ./
+# Remove default static content and copy your frontend folder
+RUN rm -rf /usr/share/nginx/html/*
+COPY ./frontend /usr/share/nginx/html
 
 EXPOSE 80
 
-# default CMD from nginx image is fine (nginx -g 'daemon off;')
+CMD ["nginx", "-g", "daemon off;"]
