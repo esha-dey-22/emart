@@ -8,13 +8,13 @@ services:
 
   jenkins:
     image: jenkins/jenkins:lts
-    privileged: true                       # lets the container access docker socket in some setups
+    privileged: true
     ports:
-      - "8080:8080"                        # Jenkins on http://localhost:8080
+      - "8080:8080"      # Jenkins UI -> http://localhost:8080
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock   # allow Jenkins to use host Docker daemon to build images
+      - /var/run/docker.sock:/var/run/docker.sock   # NOTE: mounts host docker socket
     environment:
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
     restart: unless-stopped

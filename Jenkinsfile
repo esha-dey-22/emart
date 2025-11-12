@@ -1,35 +1,36 @@
 pipeline {
   agent any
   environment {
-    IMAGE = "yourdockerhubusername/emart-site"
+    IMAGE = "esha0629/emart-site"
     TAG = "${env.BUILD_ID}"
   }
   stages {
     stage('Checkout') {
       steps { checkout scm }
     }
-    stage('Build Artifact (optional)') {
+    stage('Prepare') {
       steps {
-        // If you had a build step (e.g. webpack) do it here. For static site, no build required.
-        sh 'echo "static site - no build step"'
+        // If you have any build step for frontend (webpack, etc.) add here.
+        sh 'echo "Preparing static site (no build step configured)"'
       }
     }
-    stage('Docker Build') {
+    stage('Docker Build & Push') {
       steps {
         script {
-          docker.withRegistry('', 'dockerhub-creds') { // configure credentials id in Jenkins: dockerhub-creds
-            def img = docker.build("${IMAGE}:${TAG}")
-            img.push()
-            // tag latest
-            sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest"
-            img.push('latest')
+          // The credential id below should be created in Jenkins (Username + Password for Docker Hub)
+          docker.withRegistry('', 'dockerhub-creds') {
+            def built = docker.build("${IMAGE}:${TAG}")
+            built.push()
+            // also push latest
+            sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest || true"
+            sh "docker push ${IMAGE}:latest || true"
           }
         }
       }
     }
     stage('Cleanup') {
       steps {
-        sh "docker image prune -f || true"
+        sh 'docker image prune -f || true'
       }
     }
   }

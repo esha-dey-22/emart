@@ -3,29 +3,42 @@
   hosts: webservers
   become: true
   vars:
-    image: "yourdockerhubusername/emart-site:latest"
+    image: "esha0629/emart-site:latest"
     container_name: "emart-site"
     publish_port: "80:80"
 
   tasks:
-    - name: Ensure Docker is installed (using community.docker or package)
+    - name: Ensure apt cache updated (Debian)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure Docker (Debian/Ubuntu)
       apt:
         name: docker.io
         state: present
       when: ansible_os_family == "Debian"
 
+    - name: Ensure Docker (RedHat/CentOS/Amazon)
+      yum:
+        name: docker
+        state: present
+      when: ansible_os_family == "RedHat"
+
     - name: Start Docker service
       service:
         name: docker
         state: started
-        enabled: true
+        enabled: yes
 
-    - name: Pull site image
+    - name: Pull the latest site image
       command: docker pull {{ image }}
+      register: pull_result
+      changed_when: "'Downloaded newer image' in pull_result.stdout or 'Status: Downloaded' in pull_result.stdout"
 
-    - name: Stop existing container (if any)
+    - name: Stop existing container if running
       command: docker rm -f {{ container_name }}
       ignore_errors: true
 
-    - name: Run new container
+    - name: Run the site container
       command: docker run -d --name {{ container_name }} -p {{ publish_port }} --restart=always {{ image }}
