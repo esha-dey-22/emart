@@ -1,42 +1,44 @@
 pipeline {
   agent any
   environment {
-    IMAGE = "esha0629/emart-site"
-    TAG = "${env.BUILD_ID}"
+    IMAGE = "esha0629/emart-site"   // your Docker Hub repo
+    TAG   = "${env.BUILD_ID}"
   }
+
   stages {
     stage('Checkout') {
       steps { checkout scm }
     }
-    stage('Prepare') {
+
+    stage('Info') {
       steps {
-        // If you have any build step for frontend (webpack, etc.) add here.
-        sh 'echo "Preparing static site (no build step configured)"'
+        echo "Running on: ${env.NODE_NAME}"
+        sh 'docker --version || true'
       }
     }
-    stage('Docker Build & Push') {
+
+    stage('Build & Push (CLI)') {
       steps {
-        script {
-          // The credential id below should be created in Jenkins (Username + Password for Docker Hub)
-          docker.withRegistry('', 'dockerhub-creds') {
-            def built = docker.build("${IMAGE}:${TAG}")
-            built.push()
-            // also push latest
-            sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest || true"
-            sh "docker push ${IMAGE}:latest || true"
-          }
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            set -eux
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker build -t ${IMAGE}:${TAG} .
+            docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
+            docker push ${IMAGE}:${TAG}
+            docker push ${IMAGE}:latest
+            docker logout || true
+          '''
         }
       }
     }
+
     stage('Cleanup') {
-      steps {
-        sh 'docker image prune -f || true'
-      }
+      steps { sh 'docker image prune -f || true' }
     }
   }
+
   post {
-    always {
-      cleanWs()
-    }
+    always { cleanWs() }
   }
 }
