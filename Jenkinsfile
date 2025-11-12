@@ -6,34 +6,49 @@ pipeline {
   }
   stages {
     stage('Checkout') {
-      steps { checkout scm }
-    }
-    stage('Prepare') {
       steps {
-        // If you have any build step for frontend (webpack, etc.) add here.
-        sh 'echo "Preparing static site (no build step configured)"'
+        checkout scm
       }
     }
-    stage('Docker Build & Push') {
+
+    stage('Prepare') {
       steps {
-        script {
-          // The credential id below should be created in Jenkins (Username + Password for Docker Hub)
-          docker.withRegistry('', 'dockerhub-creds') {
-            def built = docker.build("${IMAGE}:${TAG}")
-            built.push()
-            // also push latest
-            sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest || true"
-            sh "docker push ${IMAGE}:latest || true"
-          }
+        echo 'Preparing static site (no build step configured)'
+        sh 'echo "Running on: $(hostname)"; docker --version || true'
+      }
+    }
+
+    stage('Docker Build & Push (CLI)') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            set -e
+            echo "Logging into Docker Hub as $DOCKER_USER"
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+            echo "Building image ${IMAGE}:${TAG}"
+            docker build -t ${IMAGE}:${TAG} .
+
+            echo "Tagging latest"
+            docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
+
+            echo "Pushing tags"
+            docker push ${IMAGE}:${TAG}
+            docker push ${IMAGE}:latest
+
+            docker logout || true
+          '''
         }
       }
     }
-    stage('Cleanup') {
+
+    stage('Cleanup Images') {
       steps {
         sh 'docker image prune -f || true'
       }
     }
   }
+
   post {
     always {
       cleanWs()
